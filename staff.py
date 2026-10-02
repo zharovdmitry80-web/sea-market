@@ -214,9 +214,6 @@ def build_owner_view(body_col, root_col, render_callback):
                 ], spacing=4))
             )
 
-    root_col.controls.clear()
-    root_col.controls.append(ft.Container(bgcolor=SEA_BG, width=445, height=845, content=ft.Column([body_col], spacing=0)))
-
 def toggle_promo(pname, render_cb):
     if pname in PRODUCTS:
         PRODUCTS[pname]["is_promo"] = not PRODUCTS[pname]["is_promo"]
