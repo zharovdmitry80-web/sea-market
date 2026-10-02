@@ -11,17 +11,64 @@ def main(page):
     page.bgcolor = SEA_BG
     page.padding = 0
 
-    reg_name_input = white_field(label_txt="Ваше Имя и Фамилия", hint="Иван Иванов")
+    # Переменная состояния экрана авторизации ("reg" или "login")
+    auth_mode = {"screen": "reg"}
+    auth_error_text = ft.Text("", size=12, color=RED_ALERT)
+
+    # Поля регистрации
+    reg_name_input = white_field(label_txt="Имя и Фамилия", hint="Иван Иванов")
     reg_phone_input = white_field(label_txt="Номер телефона", hint="+7 (900) 000-00-00")
 
-    def register_new_user(e):
+    # Поля входа
+    login_name_input = white_field(label_txt="Имя и Фамилия", hint="Дмитрий Жаров")
+    login_phone_input = white_field(label_txt="Номер телефона", hint="+79950057432")
+
+    def register_user(e):
         name = reg_name_input.value.strip()
         phone = reg_phone_input.value.strip()
-        if name != "" and phone != "":
-            save_user_to_db(name, phone, "Покупатель")
-            db["fio"] = name
-            db["phone"] = phone
-            db["role"] = "Покупатель"
+        if not name or not phone:
+            auth_error_text.value = "⚠️ Заполните все поля!"
+            render()
+            return
+
+        # Проверка: существует ли пользователь в базе
+        existing_users = load_users_from_db()
+        for u in existing_users:
+            if u["name"].lower() == name.lower() and u["phone"] == phone:
+                auth_error_text.value = "⚠️ Такой пользователь уже существует! Перейдите на страницу Входа."
+                auth_mode["screen"] = "login"
+                render()
+                return
+
+        # Если новый — сохраняем и входим
+        save_user_to_db(name, phone, "Покупатель")
+        db["fio"] = name
+        db["phone"] = phone
+        db["role"] = "Покупатель"
+        render()
+
+    def login_user(e):
+        name = login_name_input.value.strip()
+        phone = login_phone_input.value.strip()
+        if not name or not phone:
+            auth_error_text.value = "⚠️ Введите имя и телефон!"
+            render()
+            return
+
+        existing_users = load_users_from_db()
+        matched_user = None
+        for u in existing_users:
+            if u["name"].lower() == name.lower() and u["phone"] == phone:
+                matched_user = u
+                break
+
+        if matched_user:
+            db["fio"] = matched_user["name"]
+            db["phone"] = matched_user["phone"]
+            db["role"] = matched_user["role"]
+            render()
+        else:
+            auth_error_text.value = "❌ Пользователь не найден. Проверьте данные или зарегистрируйтесь."
             render()
 
     search_input = white_field(hint="🔍 Поиск по витрине...")
@@ -158,20 +205,33 @@ def main(page):
     def render():
         root.controls.clear()
         
-        users_in_db = load_users_from_db()
-        if not users_in_db:
-            reg_col = ft.Column([
-                ft.Container(height=60),
-                logo(60),
+        # Если в `db["fio"]` или `db["phone"]` пусто, показываем экран Входа / Регистрации
+        if not db.get("fio") or not db.get("phone"):
+            is_reg = (auth_mode["screen"] == "reg")
+            
+            auth_col = ft.Column([
+                ft.Container(height=30),
+                logo(54),
                 ft.Text("🦐 МОРСКИЕ ДЕЛИКАТЕСЫ", size=22, color=BRAND_DARK),
-                ft.Text("Добро пожаловать! Зарегистрируйтесь для заказа.", size=12, color=MUTED),
-                reg_name_input,
-                reg_phone_input,
-                ft.Container(height=10),
-                ft.Container(bgcolor=GREEN, padding=14, border_radius=16, width=390, on_click=register_new_user, content=ft.Text("          🚀 Зарегистрироваться", size=15, color=WHITE))
+                ft.Row([
+                    ft.Container(bgcolor=BRAND_BLUE if is_reg else SEA_BG, padding=8, border_radius=10, width=125, on_click=lambda e: (auth_mode.update({"screen": "reg"}), render()), content=ft.Text("Регистрация", size=12, color=WHITE if is_reg else BLACK, text_align=ft.TextAlign.CENTER)),
+                    ft.Container(bgcolor=BRAND_BLUE if not is_reg else SEA_BG, padding=8, border_radius=10, width=125, on_click=lambda e: (auth_mode.update({"screen": "login"}), render()), content=ft.Text("Вход", size=12, color=WHITE if not is_reg else BLACK, text_align=ft.TextAlign.CENTER)),
+                ], alignment=ft.MainAxisAlignment.CENTER, spacing=10),
+                auth_error_text,
+                (ft.Column([
+                    reg_name_input,
+                    reg_phone_input,
+                    ft.Container(height=10),
+                    ft.Container(bgcolor=GREEN, padding=12, border_radius=14, width=380, on_click=register_user, content=ft.Text("🚀 Зарегистрироваться", size=14, color=WHITE, text_align=ft.TextAlign.CENTER))
+                ], spacing=10) if is_reg else ft.Column([
+                    login_name_input,
+                    login_phone_input,
+                    ft.Container(height=10),
+                    ft.Container(bgcolor=BRAND_BLUE, padding=12, border_radius=14, width=380, on_click=login_user, content=ft.Text("🔑 Войти в аккаунт", size=14, color=WHITE, text_align=ft.TextAlign.CENTER))
+                ], spacing=10))
             ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             
-            root.controls.append(ft.Container(bgcolor=WHITE, padding=20, border_radius=20, width=425, height=820, content=reg_col))
+            root.controls.append(ft.Container(bgcolor=WHITE, padding=20, border_radius=20, width=425, height=820, content=auth_col))
             page.update()
             return
 
@@ -185,7 +245,8 @@ def main(page):
             ], spacing=5)))
 
         show_float = (db["role"] == "Покупатель" and db["tab"] in ["Главная", "Каталог"] and db["subscreen"] in [None, "акции"] and db["client_chat_id"] is None and calc()[0] > 0)
-        body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=550 if show_float else 630)
+        body_height = 515 if (is_owner and show_float) else (555 if show_float else (605 if is_owner else 640))
+        body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=body_height)
 
         if db["role"] == "Владелец":
             root.controls.append(body)
@@ -272,9 +333,21 @@ def main(page):
             body.controls.append(ft.Container(padding=10, content=c_col))
 
         elif db["tab"] == "Профиль":
-            p_col = ft.Column([render_client_card(), render_news_and_promo_blocks(), sea_divider("Личный кабинет")], spacing=10)
+            p_col = ft.Column([
+                render_client_card(), 
+                render_news_and_promo_blocks(), 
+                sea_divider("Личный кабинет"),
+                ft.Container(bgcolor=WHITE, padding=14, border_radius=16, content=ft.Column([
+                    ft.Text(f"👤 Пользователь: {db['fio']}", size=14, color=BLACK),
+                    ft.Text(f"📞 Телефон: {db['phone']}", size=13, color=MUTED),
+                    ft.Text(f"👑 Роль: {db['role']}", size=13, color=BRAND_BLUE),
+                ], spacing=4)),
+                ft.Container(bgcolor=RED_ALERT, padding=12, border_radius=14, width=390, on_click=lambda e: (db.update({"fio": "", "phone": ""}), render()), content=ft.Text("🚪 Выйти из аккаунта", size=14, color=WHITE, text_align=ft.TextAlign.CENTER))
+            ], spacing=10)
+            
             for ic, title, target in [("💳", "Клиентская карта", "карта_клиента"), ("🏦", "Способы оплаты", "способы_оплаты"), ("👤", "Мои данные", "данные")]:
-                p_col.controls.append(ft.Container(bgcolor=WHITE, padding=14, border_radius=16, on_click=go("Профиль", target), content=ft.Row([ft.Text(ic, size=20), ft.Text(title, size=14, color=BLACK)])))
+                p_col.controls.insert(3, ft.Container(bgcolor=WHITE, padding=14, border_radius=16, on_click=go("Профиль", target), content=ft.Row([ft.Text(ic, size=20), ft.Text(title, size=14, color=BLACK)])))
+            
             body.controls.append(ft.Container(padding=10, content=p_col))
 
         root.controls.append(body)
