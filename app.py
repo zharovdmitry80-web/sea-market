@@ -11,7 +11,6 @@ def main(page):
     page.bgcolor = SEA_BG
     page.padding = 0
 
-    # Поля для безопасной регистрации (только Имя и Телефон -> всегда Покупатель)
     reg_name_input = white_field(label_txt="Ваше Имя и Фамилия", hint="Иван Иванов")
     reg_phone_input = white_field(label_txt="Номер телефона", hint="+7 (900) 000-00-00")
 
@@ -19,7 +18,6 @@ def main(page):
         name = reg_name_input.value.strip()
         phone = reg_phone_input.value.strip()
         if name != "" and phone != "":
-            # Все новые пользователи по умолчанию регистрируются как Покупатели
             save_user_to_db(name, phone, "Покупатель")
             db["fio"] = name
             db["phone"] = phone
@@ -163,13 +161,13 @@ def main(page):
         users_in_db = load_users_from_db()
         if not users_in_db:
             reg_col = ft.Column([
-                ft.Container(height=50),
+                ft.Container(height=60),
                 logo(60),
                 ft.Text("🌊 МОРСКОЙ МАРКЕТ", size=24, color=BRAND_DARK),
-                ft.Text("Добро пожаловать! Зарегистрируйтесь, чтобы сделать заказ.", size=12, color=MUTED),
+                ft.Text("Добро пожаловать! Зарегистрируйтесь для заказа.", size=12, color=MUTED),
                 reg_name_input,
                 reg_phone_input,
-                ft.Container(height=15),
+                ft.Container(height=10),
                 ft.Container(bgcolor=GREEN, padding=14, border_radius=16, width=390, on_click=register_new_user, content=ft.Text("          🚀 Зарегистрироваться", size=15, color=WHITE))
             ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             
@@ -177,7 +175,6 @@ def main(page):
             page.update()
             return
 
-        # ЗАЩИТА: Панель переключения ролей видна ТОЛЬКО если текущий пользователь Владелец
         is_owner = (db["role"] == "Владелец")
         if is_owner:
             root.controls.append(ft.Container(bgcolor=BRAND_DARK, padding=7, content=ft.Row([
@@ -188,8 +185,7 @@ def main(page):
             ], spacing=5)))
 
         show_float = (db["role"] == "Покупатель" and db["tab"] in ["Главная", "Каталог"] and db["subscreen"] in [None, "акции"] and db["client_chat_id"] is None and calc()[0] > 0)
-        body_height = 515 if (is_owner and show_float) else (555 if show_float else (605 if is_owner else 640))
-        body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=body_height)
+        body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=550 if show_float else 630)
 
         if db["role"] == "Владелец":
             root.controls.append(body)
@@ -267,7 +263,7 @@ def main(page):
             for k, q in list(db["cart"].items()):
                 p = PRODUCTS[k]
                 c_col.controls.append(ft.Container(bgcolor=WHITE, padding=10, border_radius=16, content=ft.Row([ft.Text(p["icon"], size=22), ft.Text(f"{k} ({q} шт.)", size=13, color=BLACK, width=210), ft.Text(f"{p['price'] * q} ₽", size=15, color=BLACK)])))
-            qty, s, pack, save, total = calc()
+            qty, _, _, _, total = calc()
             c_col.controls.append(ft.Container(bgcolor=WHITE, padding=14, border_radius=16, content=ft.Column([
                 comment_input,
                 ft.Row([ft.Text("Итого", size=18, color=BLACK), ft.Text(f"{total} ₽", size=18, color=BLACK)], spacing=215),
@@ -296,6 +292,8 @@ def main(page):
         ], spacing=8)))
 
         page.update()
+
+    render()
 
 if __name__ == "__main__":
     ft.app(target=main, view=ft.AppView.WEB_BROWSER)
