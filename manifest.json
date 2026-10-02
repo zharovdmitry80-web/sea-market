@@ -3,7 +3,7 @@
   "name": "MD • Морские Деликатесы",
   "icons": [
     {
-      "src": "logo.jpg",
+      "src": "/logo.jpg",
       "sizes": "192x192 512x512",
       "type": "image/jpeg"
     }
