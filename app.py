@@ -34,8 +34,6 @@ def main(page):
 
     root = ft.Column(spacing=0)
     main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
-    
-    # ВАЖНО: Сразу добавляем контейнер на страницу, чтобы браузер не был пустым
     page.add(main_screen)
 
     def register_user(e):
@@ -72,7 +70,7 @@ def main(page):
         phone = login_phone_input.value.strip()
         pwd = login_pass_input.value.strip()
         if not name or not phone or not pwd:
-            auth_error_text.value = "⚠️️ Заполните все поля, включая пароль!"
+            auth_error_text.value = "⚠️ Заполните все поля, включая пароль!"
             render()
             return
 
@@ -276,8 +274,7 @@ def main(page):
 
         is_owner_user = (db["phone"] == "+79950057432" or db["role"] == "Владелец")
 
-        show_float = (db["role"] == "Покупатель" and db["tab"] in ["Главная", "Каталог"] and db["subscreen"] in [None, "акции"] and db["client_chat_id"] is None and calc()[0] > 0)
-        body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=550 if show_float else 630)
+        body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
 
         if db["role"] == "Владелец":
             root.controls.append(body)
@@ -386,6 +383,14 @@ def main(page):
                 ], spacing=4)),
             ], spacing=10)
 
+            p_col.controls.append(
+                ft.Container(bgcolor=BRAND_BLUE, padding=14, border_radius=16, content=ft.Column([
+                    ft.Row([ft.Text("📱", size=22), ft.Text("Установите приложение MD", size=14, color=WHITE)], spacing=10),
+                    ft.Text("Добавьте «Морские Деликатесы» на главный экран телефона для быстрой работы!", size=11, color=WHITE),
+                    ft.Container(bgcolor=WHITE, padding=8, border_radius=10, width=365, content=ft.Text("📲 Нажмите «Меню браузера» (⋮) → «Установить приложение»", size=10, color=BLACK, text_align=ft.TextAlign.CENTER))
+                ], spacing=6))
+            )
+
             if is_owner_user:
                 p_col.controls.append(
                     ft.Container(bgcolor=BRAND_DARK, padding=12, border_radius=16, content=ft.Column([
@@ -440,5 +445,6 @@ if __name__ == "__main__":
         target=main, 
         view=ft.AppView.WEB_BROWSER, 
         port=int(os.environ.get("PORT", 8550)), 
-        host="0.0.0.0"
+        host="0.0.0.0",
+        assets_dir="."
     )
