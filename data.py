@@ -50,8 +50,6 @@ DB_NAME = "market.db"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    
-    # Таблица пользователей
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,8 +59,6 @@ def init_db():
             deliveries INTEGER
         )
     """)
-    
-    # Таблица магазинов
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS stores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -73,20 +69,11 @@ def init_db():
     """)
     conn.commit()
     
-    # Безопасная вставка дефолтных пользователей
-    cursor.execute("SELECT COUNT(*) FROM users")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES ('Главный Владелец', '+7 (995) 005-74-32', 'Владелец', 0)")
-        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES ('Алексей Ветров', '+7 (918) 000-45-12', 'Курьер', 1)")
-        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES ('Иван Морозов', '+7 (918) 777-55-33', 'Покупатель', 0)")
-        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES ('Сергей Бережной', '+7 (900) 123-45-67', 'Магазин', 0)")
-
-    # Безопасная вставка магазинов
+    # Магазины по умолчанию оставим, чтобы сеть сразу работала
     cursor.execute("SELECT COUNT(*) FROM stores")
     if cursor.fetchone()[0] == 0:
         cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морской Маркет №1 (Северная)', 'г. Краснодар, ул. 1-го Мая, 580/3', '08:00 – 22:00')")
         cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морской Маркет №2 (Центр)', 'г. Краснодар, ул. Красная, 150', '08:00 – 23:00')")
-
     conn.commit()
     conn.close()
 
