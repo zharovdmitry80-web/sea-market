@@ -32,6 +32,12 @@ def main(page):
     new_pass_input.can_reveal_password = True
     pass_change_status = ft.Text("", size=11, color=GREEN)
 
+    root = ft.Column(spacing=0)
+    main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
+    
+    # ВАЖНО: Сразу добавляем контейнер на страницу, чтобы браузер не был пустым
+    page.add(main_screen)
+
     def register_user(e):
         name = reg_name_input.value.strip()
         phone = reg_phone_input.value.strip()
@@ -66,7 +72,7 @@ def main(page):
         phone = login_phone_input.value.strip()
         pwd = login_pass_input.value.strip()
         if not name or not phone or not pwd:
-            auth_error_text.value = "⚠️ Заполните все поля, включая пароль!"
+            auth_error_text.value = "⚠️️ Заполните все поля, включая пароль!"
             render()
             return
 
@@ -114,10 +120,6 @@ def main(page):
     phone_input = white_field(label_txt="Телефон", val=db["phone"])
     addr_input = white_field(label_txt="Адрес доставки", val=db["address"])
     intercom_input = white_field(label_txt="Домофон", val=db["intercom"])
-
-    root = ft.Column(spacing=0)
-    main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
-    page.add(main_screen)
 
     def calc():
         for k in list(db["cart"].keys()):
@@ -430,6 +432,8 @@ def main(page):
         ], spacing=8)))
 
         page.update()
+
+    render()
 
 if __name__ == "__main__":
     ft.app(
