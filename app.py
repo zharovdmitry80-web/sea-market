@@ -263,4 +263,4 @@ def main(page):
     page.add(main_screen)
     render()
 
-ft.run(main)
+ft.app(target=main)
