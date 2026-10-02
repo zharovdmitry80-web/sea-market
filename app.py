@@ -303,8 +303,22 @@ def main(page):
                 ]
                 if p.get("photo") and p["photo"] != "logo.jpg":
                     post_controls.append(ft.Container(content=ft.Image(src=p["photo"], width=390, height=220, border_radius=12, fit=ft.ImageFit.COVER), border_radius=12))
+                
+                # Исправленный блок видео с кликабельной ссылкой на Telegram
                 if p.get("video"):
-                    post_controls.append(ft.Container(bgcolor=BRAND_DARK, padding=10, border_radius=12, content=ft.Row([ft.Text("🎬", size=20), ft.Column([ft.Text("Видео-материал из Telegram", size=12, color=WHITE), ft.Text(p["video"], size=10, color=MUTED)], spacing=2)], spacing=10)))
+                    post_controls.append(
+                        ft.Container(
+                            bgcolor=BRAND_DARK, padding=12, border_radius=12, 
+                            on_click=lambda e: page.launch_url(f"https://t.me/{db['tg_channel']}"),
+                            content=ft.Row([
+                                ft.Text("🎬", size=22),
+                                ft.Column([
+                                    ft.Text("Смотреть видео в Telegram-канале", size=12, color=WHITE),
+                                    ft.Text(p["video"], size=10, color=SEA_BG)
+                                ], spacing=2)
+                            ], spacing=10)
+                        )
+                    )
 
                 news_col.controls.append(ft.Container(bgcolor=WHITE, padding=14, border_radius=18, content=ft.Column(post_controls, spacing=8)))
                 
