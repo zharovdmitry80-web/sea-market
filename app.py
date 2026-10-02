@@ -11,7 +11,7 @@ def main(page):
     page.bgcolor = SEA_BG
     page.padding = 0
 
-    # Поля для экрана регистрации при первом запуске
+    # Поля для экрана регистрации
     reg_name_input = white_field(label_txt="Ваше Имя и Фамилия", hint="Иван Иванов")
     reg_phone_input = white_field(label_txt="Номер телефона", hint="+7 (900) 000-00-00")
     
@@ -43,6 +43,9 @@ def main(page):
 
     root = ft.Column(spacing=0)
     main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
+    
+    # ВАЖНО: Добавляем главный экран на страницу сразу, чтобы браузер не был пустым
+    page.add(main_screen)
 
     def calc():
         for k in list(db["cart"].keys()):
@@ -305,5 +308,7 @@ def main(page):
 
         page.update()
 
+    render()
+
 if __name__ == "__main__":
-    ft.app(target=main, view=ft.AppView.FLET_APP, port=int(os.environ.get("PORT", 8550)), host="0.0.0.0")
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER)
