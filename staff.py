@@ -79,8 +79,8 @@ def finish_order(oid, render_cb):
 def build_owner_view(body_col, root_col, render_callback):
     body_col.controls.clear()
     
-    stores_count = len(load_stores_from_db())
-    users_count = len(load_users_from_db())
+    stores_list = load_stores_from_db()
+    users_list = load_users_from_db()
     
     header = ft.Container(
         bgcolor=BRAND_DARK, padding=12, border_radius=16,
@@ -93,47 +93,122 @@ def build_owner_view(body_col, root_col, render_callback):
                     content=ft.Row([ft.Text("👤", size=14), ft.Text("Профиль", size=11, color=WHITE)], spacing=4)
                 )
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            ft.Text(f"Магазинов в сети: {stores_count} | Пользователей: {users_count}", size=11, color=SEA_BG)
+            ft.Text(f"Магазинов в сети: {len(stores_list)} | Пользователей: {len(users_list)}", size=11, color=SEA_BG)
         ], spacing=6)
     )
     body_col.controls.append(header)
     
-    # Блок настройки Telegram-канала с автоочисткой ссылок
-    tg_input = white_field(val=db["tg_channel"], hint="morskie_delikatesy или https://t.me/...")
+    # Нижняя навигация панели владельца
+    owner_tabs = ["Каталог", "Новости", "Люди", "Магазины", "Заказы"]
+    current_o_tab = db.get("owner_tab", "Каталог")
     
-    def save_tg(e):
-        cleaned = clean_tg_link(tg_input.value)
-        db["tg_channel"] = cleaned
-        save_db_setting("tg_channel", cleaned)
-        sync_telegram_channel()
-        render_callback()
+    tabs_row = ft.Row([
+        ft.Container(
+            bgcolor=BRAND_DARK if current_o_tab == t else WHITE,
+            padding=8, border_radius=10, width=76,
+            on_click=lambda e, tab=t: (db.update({"owner_tab": tab}), render_callback()),
+            content=ft.Text(t, size=11, color=WHITE if current_o_tab == t else BLACK, text_align=ft.TextAlign.CENTER)
+        ) for t in owner_tabs
+    ], spacing=4)
+    body_col.controls.append(tabs_row)
 
-    body_col.controls.append(
-        ft.Container(bgcolor=WHITE, padding=12, border_radius=14, content=ft.Column([
-            ft.Text("📢 Управление Telegram-каналом новостей", size=13, color=BLACK),
-            tg_input,
-            ft.Row([
-                ft.Container(bgcolor=BRAND_BLUE, padding=8, border_radius=10, on_click=save_tg, content=ft.Text("💾 Сохранить и обновить", size=11, color=WHITE)),
-                ft.Container(bgcolor=GREEN, padding=8, border_radius=10, on_click=lambda e: (sync_telegram_channel(), render_callback()), content=ft.Text("🔄 Синхронизировать", size=11, color=WHITE))
-            ], spacing=8)
-        ], spacing=8))
-    )
-    
-    body_col.controls.append(sea_divider("Управление каталогом и акциями"))
-    
-    for pname, pdata in PRODUCTS.items():
-        p_card = ft.Container(
-            bgcolor=WHITE, padding=12, border_radius=14,
-            content=ft.Row([
-                ft.Row([ft.Text(pdata['icon'], size=24), ft.Column([ft.Text(pname, size=13, color=BLACK), ft.Text(f"Цена: {pdata['price']} ₽ ({pdata['weight']})", size=11, color=MUTED)], spacing=2)], spacing=10),
-                ft.Container(
-                    bgcolor=BRAND_BLUE, padding=8, border_radius=10,
-                    on_click=lambda e, name=pname: toggle_promo(name, render_callback),
-                    content=ft.Text("🔥 Акция" if not pdata['is_promo'] else "✓ Активен", size=11, color=WHITE)
-                )
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+    # 1. ВКЛАДКА КАТАЛОГ И АКЦИИ
+    if current_o_tab == "Каталог":
+        tg_input = white_field(val=db["tg_channel"], hint="morskie_delikatesy или https://t.me/...")
+        
+        def save_tg(e):
+            cleaned = clean_tg_link(tg_input.value)
+            db["tg_channel"] = cleaned
+            save_db_setting("tg_channel", cleaned)
+            sync_telegram_channel()
+            render_callback()
+
+        body_col.controls.append(
+            ft.Container(bgcolor=WHITE, padding=12, border_radius=14, content=ft.Column([
+                ft.Text("📢 Telegram-канал новостей", size=13, color=BLACK),
+                tg_input,
+                ft.Row([
+                    ft.Container(bgcolor=BRAND_BLUE, padding=8, border_radius=10, on_click=save_tg, content=ft.Text("💾 Сохранить", size=11, color=WHITE)),
+                    ft.Container(bgcolor=GREEN, padding=8, border_radius=10, on_click=lambda e: (sync_telegram_channel(), render_callback()), content=ft.Text("🔄 Синхронизировать", size=11, color=WHITE))
+                ], spacing=8)
+            ], spacing=8))
         )
-        body_col.controls.append(p_card)
+        
+        body_col.controls.append(sea_divider("Управление каталогом и акциями"))
+        
+        for pname, pdata in PRODUCTS.items():
+            p_card = ft.Container(
+                bgcolor=WHITE, padding=12, border_radius=14,
+                content=ft.Row([
+                    ft.Row([ft.Text(pdata['icon'], size=24), ft.Column([ft.Text(pname, size=13, color=BLACK), ft.Text(f"Цена: {pdata['price']} ₽ ({pdata['weight']})", size=11, color=MUTED)], spacing=2)], spacing=10),
+                    ft.Container(
+                        bgcolor=BRAND_BLUE, padding=8, border_radius=10,
+                        on_click=lambda e, name=pname: toggle_promo(name, render_callback),
+                        content=ft.Text("🔥 Акция" if not pdata['is_promo'] else "✓ Активен", size=11, color=WHITE)
+                    )
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+            )
+            body_col.controls.append(p_card)
+
+    # 2. ВКЛАДКА НОВОСТИ
+    elif current_o_tab == "Новости":
+        body_col.controls.append(sea_divider("Лента новостей Telegram"))
+        for p in db["news_posts"]:
+            body_col.controls.append(
+                ft.Container(bgcolor=WHITE, padding=12, border_radius=14, content=ft.Column([
+                    ft.Text(p["author"], size=12, color=BRAND_BLUE),
+                    ft.Text(p["text"], size=12, color=BLACK)
+                ], spacing=6))
+            )
+
+    # 3. ВКЛАДКА ЛЮДИ (Управление пользователями и ролями)
+    elif current_o_tab == "Люди":
+        body_col.controls.append(sea_divider("Список пользователей и сотрудников"))
+        for u in users_list:
+            uid, uname, uphone, urole = u["id"], u["name"], u["phone"], u["role"]
+            body_col.controls.append(
+                ft.Container(bgcolor=WHITE, padding=12, border_radius=14, content=ft.Row([
+                    ft.Column([ft.Text(uname, size=13, color=BLACK), ft.Text(f"{uphone} • {urole}", size=11, color=MUTED)], spacing=2),
+                    ft.Row([
+                        ft.Container(
+                            bgcolor=CORAL_BTN, padding=6, border_radius=8,
+                            on_click=lambda e, id=uid: (delete_user_from_db(id), render_callback()),
+                            content=ft.Text("🗑", size=12, color=WHITE)
+                        )
+                    ], spacing=6)
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
+            )
+
+    # 4. ВКЛАДКА МАГАЗИНЫ
+    elif current_o_tab == "Магазины":
+        body_col.controls.append(sea_divider("Торговые точки сети"))
+        for s in stores_list:
+            sid, sname, saddr = s["id"], s["name"], s["address"]
+            body_col.controls.append(
+                ft.Container(bgcolor=WHITE, padding=12, border_radius=14, content=ft.Row([
+                    ft.Column([ft.Text(sname, size=13, color=BLACK), ft.Text(saddr, size=11, color=MUTED)], spacing=2),
+                    ft.Container(
+                        bgcolor=CORAL_BTN, padding=6, border_radius=8,
+                        on_click=lambda e, id=sid: (delete_store_from_db(id), render_callback()),
+                        content=ft.Text("🗑", size=12, color=WHITE)
+                    )
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
+            )
+
+    # 5. ВКЛАДКА ЗАКАЗЫ
+    elif current_o_tab == "Заказы":
+        body_col.controls.append(sea_divider("Все заказы клиентов"))
+        for o in db["orders_list"]:
+            body_col.controls.append(
+                ft.Container(bgcolor=WHITE, padding=12, border_radius=14, content=ft.Column([
+                    ft.Row([ft.Text(f"Заказ №{o['id']}", size=13, color=BLACK), status_badge(o['state'])], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    ft.Text(f"Клиент: {o['fio']} ({o['phone']}) • {o['total']} ₽", size=11, color=MUTED)
+                ], spacing=4))
+            ]
+
+    # Нижняя клиентская навигация также дублируется внизу для удобства возврата
+    root_col.controls.clear()
+    root_col.controls.append(ft.Container(bgcolor=SEA_BG, width=445, height=845, content=ft.Column([body_col], spacing=0)))
 
 def toggle_promo(pname, render_cb):
     if pname in PRODUCTS:
