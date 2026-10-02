@@ -7,18 +7,8 @@ from staff import build_staff_view, build_owner_view, render_chat_window
 def main(page):
     page.title = "MD — Морские Деликатесы"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.window.width = 445
-    page.window.height = 865
     page.bgcolor = SEA_BG
     page.padding = 0
-
-    page.meta = {
-        "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
-        "theme-color": "#0F4C64",
-        "apple-mobile-web-app-capable": "yes",
-        "apple-mobile-web-app-status-bar-style": "black-translucent",
-        "apple-mobile-web-app-title": "MD"
-    }
 
     auth_mode = {"screen": "reg"}
     auth_error_text = ft.Text("", size=12, color=RED_ALERT)
@@ -40,23 +30,9 @@ def main(page):
     new_pass_input.can_reveal_password = True
     pass_change_status = ft.Text("", size=11, color=GREEN)
 
-    root = ft.Column(spacing=0)
-    main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
+    root = ft.Column(spacing=0, expand=True)
+    main_screen = ft.Container(bgcolor=SEA_BG, expand=True, content=root)
     page.add(main_screen)
-
-    install_dlg = ft.AlertDialog(
-        title=ft.Text("📱 Установка приложения MD"),
-        content=ft.Column([
-            ft.Text("Чтобы приложение работало как нативная программа:", size=13, color=BLACK),
-            ft.Text("1. В браузере (Chrome / Safari) нажмите на меню (три точки ⋮ или кнопку «Поделиться» ⎋).", size=12, color=MUTED),
-            ft.Text("2. Выберите пункт «На главный экран» или «Установить приложение».", size=12, color=MUTED),
-            ft.Text("3. Нажмите «Добавить». Готово! Иконка появится на вашем телефоне.", size=12, color=MUTED),
-        ], spacing=8, tight=True),
-        actions=[ft.TextButton("Понятно", on_click=lambda e: page.close(install_dlg))]
-    )
-
-    def trigger_install(e):
-        page.open(install_dlg)
 
     def register_user(e):
         name = reg_name_input.value.strip()
@@ -66,14 +42,6 @@ def main(page):
             auth_error_text.value = "⚠️ Заполните все поля и укажите пароль!"
             render()
             return
-
-        existing_users = load_users_from_db()
-        for u in existing_users:
-            if u["name"].lower() == name.lower() and u["phone"] == phone:
-                auth_error_text.value = "⚠️ Пользователь уже существует! Перейдите на вкладку Вход."
-                auth_mode["screen"] = "login"
-                render()
-                return
 
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
@@ -100,7 +68,7 @@ def main(page):
         matched_user = None
         for u in existing_users:
             if u["name"].lower() == name.lower() and u["phone"] == phone:
-                db_pwd = u[5] if len(u) > 5 else "12345"
+                db_pwd = u.get("password", "12345")
                 if db_pwd == pwd or (phone == "+79950057432" and pwd == "12345"):
                     matched_user = u
                     break
@@ -420,17 +388,6 @@ def main(page):
                 ], spacing=4)),
             ], spacing=10)
 
-            p_col.controls.append(
-                ft.Container(
-                    bgcolor=BRAND_BLUE, padding=14, border_radius=16, 
-                    on_click=trigger_install,
-                    content=ft.Column([
-                        ft.Row([ft.Text("📱", size=22), ft.Text("Установить приложение на телефон", size=14, color=WHITE)], spacing=10),
-                        ft.Text("Нажмите сюда, чтобы добавить «MD» на главный экран в один клик!", size=11, color=WHITE),
-                    ], spacing=4)
-                )
-            )
-
             if is_owner_user:
                 p_col.controls.append(
                     ft.Container(bgcolor=BRAND_DARK, padding=12, border_radius=16, content=ft.Column([
@@ -485,6 +442,5 @@ if __name__ == "__main__":
         target=main, 
         view=ft.AppView.WEB_BROWSER, 
         port=int(os.environ.get("PORT", 8550)), 
-        host="0.0.0.0",
-        assets_dir="."
+        host="0.0.0.0"
     )
