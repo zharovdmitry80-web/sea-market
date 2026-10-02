@@ -1,3 +1,4 @@
+import sqlite3
 import flet as ft
 from data import *
 
@@ -76,6 +77,20 @@ def finish_order(oid, render_cb):
         o["chat"].append("Система: Заказ успешно доставлен!")
     render_cb()
 
+def delete_user_from_db(uid):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM users WHERE id = ?", (uid,))
+    conn.commit()
+    conn.close()
+
+def delete_store_from_db(sid):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM stores WHERE id = ?", (sid,))
+    conn.commit()
+    conn.close()
+
 def build_owner_view(body_col, root_col, render_callback):
     body_col.controls.clear()
     
@@ -98,21 +113,20 @@ def build_owner_view(body_col, root_col, render_callback):
     )
     body_col.controls.append(header)
     
-    # Нижняя навигация панели владельца
     owner_tabs = ["Каталог", "Новости", "Люди", "Магазины", "Заказы"]
     current_o_tab = db.get("owner_tab", "Каталог")
     
     tabs_row = ft.Row([
         ft.Container(
             bgcolor=BRAND_DARK if current_o_tab == t else WHITE,
-            padding=8, border_radius=10, width=76,
+            padding=10, border_radius=12, width=74,
             on_click=lambda e, tab=t: (db.update({"owner_tab": tab}), render_callback()),
             content=ft.Text(t, size=11, color=WHITE if current_o_tab == t else BLACK, text_align=ft.TextAlign.CENTER)
         ) for t in owner_tabs
-    ], spacing=4)
+    ], spacing=4, alignment=ft.MainAxisAlignment.CENTER)
+    
     body_col.controls.append(tabs_row)
 
-    # 1. ВКЛАДКА КАТАЛОГ И АКЦИИ
     if current_o_tab == "Каталог":
         tg_input = white_field(val=db["tg_channel"], hint="morskie_delikatesy или https://t.me/...")
         
@@ -150,7 +164,6 @@ def build_owner_view(body_col, root_col, render_callback):
             )
             body_col.controls.append(p_card)
 
-    # 2. ВКЛАДКА НОВОСТИ
     elif current_o_tab == "Новости":
         body_col.controls.append(sea_divider("Лента новостей Telegram"))
         for p in db["news_posts"]:
@@ -161,7 +174,6 @@ def build_owner_view(body_col, root_col, render_callback):
                 ], spacing=6))
             )
 
-    # 3. ВКЛАДКА ЛЮДИ (Управление пользователями и ролями)
     elif current_o_tab == "Люди":
         body_col.controls.append(sea_divider("Список пользователей и сотрудников"))
         for u in users_list:
@@ -169,17 +181,14 @@ def build_owner_view(body_col, root_col, render_callback):
             body_col.controls.append(
                 ft.Container(bgcolor=WHITE, padding=12, border_radius=14, content=ft.Row([
                     ft.Column([ft.Text(uname, size=13, color=BLACK), ft.Text(f"{uphone} • {urole}", size=11, color=MUTED)], spacing=2),
-                    ft.Row([
-                        ft.Container(
-                            bgcolor=CORAL_BTN, padding=6, border_radius=8,
-                            on_click=lambda e, id=uid: (delete_user_from_db(id), render_callback()),
-                            content=ft.Text("🗑", size=12, color=WHITE)
-                        )
-                    ], spacing=6)
+                    ft.Container(
+                        bgcolor=CORAL_BTN, padding=6, border_radius=8,
+                        on_click=lambda e, id=uid: (delete_user_from_db(id), render_callback()),
+                        content=ft.Text("🗑 Удалить", size=11, color=WHITE)
+                    )
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
             )
 
-    # 4. ВКЛАДКА МАГАЗИНЫ
     elif current_o_tab == "Магазины":
         body_col.controls.append(sea_divider("Торговые точки сети"))
         for s in stores_list:
@@ -190,12 +199,11 @@ def build_owner_view(body_col, root_col, render_callback):
                     ft.Container(
                         bgcolor=CORAL_BTN, padding=6, border_radius=8,
                         on_click=lambda e, id=sid: (delete_store_from_db(id), render_callback()),
-                        content=ft.Text("🗑", size=12, color=WHITE)
+                        content=ft.Text("🗑 Удалить", size=11, color=WHITE)
                     )
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
             )
 
-    # 5. ВКЛАДКА ЗАКАЗЫ
     elif current_o_tab == "Заказы":
         body_col.controls.append(sea_divider("Все заказы клиентов"))
         for o in db["orders_list"]:
@@ -204,11 +212,7 @@ def build_owner_view(body_col, root_col, render_callback):
                     ft.Row([ft.Text(f"Заказ №{o['id']}", size=13, color=BLACK), status_badge(o['state'])], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                     ft.Text(f"Клиент: {o['fio']} ({o['phone']}) • {o['total']} ₽", size=11, color=MUTED)
                 ], spacing=4))
-            ]
-
-    # Нижняя клиентская навигация также дублируется внизу для удобства возврата
-    root_col.controls.clear()
-    root_col.controls.append(ft.Container(bgcolor=SEA_BG, width=445, height=845, content=ft.Column([body_col], spacing=0)))
+            )
 
 def toggle_promo(pname, render_cb):
     if pname in PRODUCTS:
