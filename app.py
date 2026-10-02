@@ -12,7 +12,6 @@ def main(page):
     page.bgcolor = SEA_BG
     page.padding = 0
 
-    # Прописываем мета-теги и иконку для мобильных устройств и PWA
     page.meta = {
         "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
         "theme-color": "#0F4C64",
@@ -44,17 +43,6 @@ def main(page):
     root = ft.Column(spacing=0)
     main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
     page.add(main_screen)
-
-    # Интерактивное диалоговое окно для установки приложения на телефон
-    install_banner_banner = ft.Banner(
-        bgcolor=WHITE,
-        leading=logo(40),
-        content=ft.Text("Установите приложение «MD» на главный экран для быстрого доступа!", size=13, color=BLACK),
-        actions=[
-            ft.TextButton("Как установить?", on_click=lambda e: page.open(install_dlg)),
-            ft.TextButton("Закрыть", on_click=lambda e: page.close(install_banner_banner)),
-        ],
-    )
 
     install_dlg = ft.AlertDialog(
         title=ft.Text("📱 Установка приложения MD"),
@@ -308,6 +296,9 @@ def main(page):
 
         is_owner_user = (db["phone"] == "+79950057432" or db["role"] == "Владелец")
 
+        # Обязательно объявляем переменные состояния ДО их использования
+        show_float = (db["role"] == "Покупатель" and db["tab"] in ["Главная", "Каталог"] and db["subscreen"] in [None, "акции"] and db["client_chat_id"] is None and calc()[0] > 0)
+        
         body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
 
         if db["role"] == "Владелец":
@@ -430,7 +421,6 @@ def main(page):
                 ], spacing=4)),
             ], spacing=10)
 
-            # Кнопка установки приложения на телефон во вкладке Профиль
             p_col.controls.append(
                 ft.Container(
                     bgcolor=BRAND_BLUE, padding=14, border_radius=16, 
