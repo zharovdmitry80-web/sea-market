@@ -1,0 +1,15 @@
+{
+  "short_name": "MD",
+  "name": "MD • Морские Деликатесы",
+  "icons": [
+    {
+      "src": "logo.jpg",
+      "sizes": "192x192 512x512",
+      "type": "image/jpeg"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#D4EDF7",
+  "theme_color": "#0F4C64",
+  "display": "standalone"
+}
