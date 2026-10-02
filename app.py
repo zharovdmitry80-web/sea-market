@@ -11,6 +11,29 @@ def main(page):
     page.bgcolor = SEA_BG
     page.padding = 0
 
+    # Поля для экрана регистрации
+    reg_name_input = white_field(label_txt="Ваше Имя и Фамилия", hint="Иван Иванов")
+    reg_phone_input = white_field(label_txt="Номер телефона", hint="+7 (900) 000-00-00")
+    
+    # Выбор стартовой роли при регистрации
+    selected_reg_role = {"role": "Покупатель"}
+
+    def set_reg_role(r):
+        def h(e):
+            selected_reg_role["role"] = r
+            render()
+        return h
+
+    def register_new_user(e):
+        name = reg_name_input.value.strip()
+        phone = reg_phone_input.value.strip()
+        if name != "" and phone != "":
+            save_user_to_db(name, phone, selected_reg_role["role"])
+            db["fio"] = name
+            db["phone"] = phone
+            db["role"] = selected_reg_role["role"]
+            render()
+
     search_input = white_field(hint="🔍 Поиск по витрине...")
     comment_input = white_field(label_txt="Пожелания сборщику", val=db["comment"])
 
@@ -143,6 +166,30 @@ def main(page):
 
     def render():
         root.controls.clear()
+        
+        # --- ПРОВЕРКА БАЗЫ ДАННЫХ: ЕСЛИ ПОЛЬЗОВАТЕЛЕЙ НЕТ — ОТКРЫВАЕМ ОКНО РЕГИСТРАЦИИ ---
+        users_in_db = load_users_from_db()
+        if not users_in_db:
+            reg_col = ft.Column([
+                ft.Container(height=40),
+                logo(54),
+                ft.Text("🌊 МОРСКОЙ МАРКЕТ", size=22, color=BRAND_DARK),
+                ft.Text("Добро пожаловать! Зарегистрируйтесь для начала работы в приложении.", size=12, color=MUTED),
+                reg_name_input,
+                reg_phone_input,
+                ft.Text("Выберите вашу стартовую роль:", size=13, color=BLACK),
+                ft.Row([
+                    ft.Container(bgcolor=CORAL_BTN if selected_reg_role["role"] == "Владелец" else SEA_BG, padding=10, border_radius=12, width=120, on_click=set_reg_role("Владелец"), content=ft.Text("👑 Владелец", size=12, color=WHITE if selected_reg_role["role"] == "Владелец" else BLACK)),
+                    ft.Container(bgcolor=BRAND_BLUE if selected_reg_role["role"] == "Покупатель" else SEA_BG, padding=10, border_radius=12, width=125, on_click=set_reg_role("Покупатель"), content=ft.Text("👤 Покупатель", size=12, color=WHITE if selected_reg_role["role"] == "Покупатель" else BLACK)),
+                ], spacing=8),
+                ft.Container(height=10),
+                ft.Container(bgcolor=GREEN, padding=14, border_radius=16, width=390, on_click=register_new_user, content=ft.Text("        🚀 Зарегистрироваться и войти", size=14, color=WHITE))
+            ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+            
+            root.controls.append(ft.Container(bgcolor=WHITE, padding=20, border_radius=20, width=425, height=820, content=reg_col))
+            page.update()
+            return
+
         qty, s, pack, save, total = calc()
         c_cnt = sum(1 for o in db["orders_list"] if o["state"] in ["поиск_курьера", "передан_курьеру", "в_доставке"])
 
@@ -260,7 +307,5 @@ def main(page):
 
         page.update()
 
-    page.add(main_screen)
-    render()
-
-ft.app(target=main)
+    if __name__ == "__main__":
+        ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=8550)
