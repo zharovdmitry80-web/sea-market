@@ -11,26 +11,19 @@ def main(page):
     page.bgcolor = SEA_BG
     page.padding = 0
 
-    # Поля для экрана регистрации
+    # Поля для безопасной регистрации (только Имя и Телефон -> всегда Покупатель)
     reg_name_input = white_field(label_txt="Ваше Имя и Фамилия", hint="Иван Иванов")
     reg_phone_input = white_field(label_txt="Номер телефона", hint="+7 (900) 000-00-00")
-    
-    selected_reg_role = {"role": "Покупатель"}
-
-    def set_reg_role(r):
-        def h(e):
-            selected_reg_role["role"] = r
-            render()
-        return h
 
     def register_new_user(e):
         name = reg_name_input.value.strip()
         phone = reg_phone_input.value.strip()
         if name != "" and phone != "":
-            save_user_to_db(name, phone, selected_reg_role["role"])
+            # Все новые пользователи по умолчанию регистрируются как Покупатели
+            save_user_to_db(name, phone, "Покупатель")
             db["fio"] = name
             db["phone"] = phone
-            db["role"] = selected_reg_role["role"]
+            db["role"] = "Покупатель"
             render()
 
     search_input = white_field(hint="🔍 Поиск по витрине...")
@@ -43,8 +36,6 @@ def main(page):
 
     root = ft.Column(spacing=0)
     main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
-    
-    # ВАЖНО: Добавляем главный экран на страницу сразу, чтобы браузер не был пустым
     page.add(main_screen)
 
     def calc():
@@ -172,37 +163,33 @@ def main(page):
         users_in_db = load_users_from_db()
         if not users_in_db:
             reg_col = ft.Column([
-                ft.Container(height=40),
-                logo(54),
-                ft.Text("🌊 МОРСКОЙ МАРКЕТ", size=22, color=BRAND_DARK),
-                ft.Text("Добро пожаловать! Зарегистрируйтесь для начала работы.", size=12, color=MUTED),
+                ft.Container(height=50),
+                logo(60),
+                ft.Text("🌊 МОРСКОЙ МАРКЕТ", size=24, color=BRAND_DARK),
+                ft.Text("Добро пожаловать! Зарегистрируйтесь, чтобы сделать заказ.", size=12, color=MUTED),
                 reg_name_input,
                 reg_phone_input,
-                ft.Text("Выберите вашу стартовую роль:", size=13, color=BLACK),
-                ft.Row([
-                    ft.Container(bgcolor=CORAL_BTN if selected_reg_role["role"] == "Владелец" else SEA_BG, padding=10, border_radius=12, width=120, on_click=set_reg_role("Владелец"), content=ft.Text("👑 Владелец", size=12, color=WHITE if selected_reg_role["role"] == "Владелец" else BLACK)),
-                    ft.Container(bgcolor=BRAND_BLUE if selected_reg_role["role"] == "Покупатель" else SEA_BG, padding=10, border_radius=12, width=125, on_click=set_reg_role("Покупатель"), content=ft.Text("👤 Покупатель", size=12, color=WHITE if selected_reg_role["role"] == "Покупатель" else BLACK)),
-                ], spacing=8),
-                ft.Container(height=10),
-                ft.Container(bgcolor=GREEN, padding=14, border_radius=16, width=390, on_click=register_new_user, content=ft.Text("        🚀 Зарегистрироваться и войти", size=14, color=WHITE))
+                ft.Container(height=15),
+                ft.Container(bgcolor=GREEN, padding=14, border_radius=16, width=390, on_click=register_new_user, content=ft.Text("          🚀 Зарегистрироваться", size=15, color=WHITE))
             ], spacing=12, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
             
             root.controls.append(ft.Container(bgcolor=WHITE, padding=20, border_radius=20, width=425, height=820, content=reg_col))
             page.update()
             return
 
-        qty, s, pack, save, total = calc()
-        c_cnt = sum(1 for o in db["orders_list"] if o["state"] in ["поиск_курьера", "передан_курьеру", "в_доставке"])
+        # ЗАЩИТА: Панель переключения ролей видна ТОЛЬКО если текущий пользователь Владелец
+        is_owner = (db["role"] == "Владелец")
+        if is_owner:
+            root.controls.append(ft.Container(bgcolor=BRAND_DARK, padding=7, content=ft.Row([
+                ft.Container(content=ft.Text("👤 Клиент", color=WHITE, size=11), bgcolor=BRAND_BLUE if db["role"] == "Покупатель" else "#1E3A4C", padding=6, border_radius=8, on_click=lambda e: (db.update({"role": "Покупатель"}), render())),
+                ft.Container(content=ft.Text("🏪 Магазин", color=WHITE, size=11), bgcolor=BRAND_BLUE if db["role"] == "Магазин" else "#1E3A4C", padding=6, border_radius=8, on_click=lambda e: (db.update({"role": "Магазин"}), render())),
+                ft.Container(content=ft.Text("🛵 Курьер", color=WHITE, size=11), bgcolor=BRAND_BLUE if db["role"] == "Курьер" else "#1E3A4C", padding=6, border_radius=8, on_click=lambda e: (db.update({"role": "Курьер"}), render())),
+                ft.Container(content=ft.Text("👑 Владелец", color=WHITE, size=11), bgcolor=CORAL_BTN if db["role"] == "Владелец" else "#1E3A4C", padding=6, border_radius=8, on_click=lambda e: (db.update({"role": "Владелец"}), render())),
+            ], spacing=5)))
 
-        root.controls.append(ft.Container(bgcolor=BRAND_DARK, padding=7, content=ft.Row([
-            ft.Container(content=ft.Text("👤 Клиент", color=WHITE, size=11), bgcolor=BRAND_BLUE if db["role"] == "Покупатель" else "#1E3A4C", padding=6, border_radius=8, on_click=lambda e: (db.update({"role": "Покупатель"}), render())),
-            ft.Container(content=ft.Text("🏪 Магазин", color=WHITE, size=11), bgcolor=BRAND_BLUE if db["role"] == "Магазин" else "#1E3A4C", padding=6, border_radius=8, on_click=lambda e: (db.update({"role": "Магазин"}), render())),
-            ft.Container(content=ft.Text("🛵 Курьер", color=WHITE, size=11), bgcolor=BRAND_BLUE if db["role"] == "Курьер" else "#1E3A4C", padding=6, border_radius=8, on_click=lambda e: (db.update({"role": "Курьер"}), render())),
-            ft.Container(content=ft.Text("👑 Владелец", color=WHITE, size=11), bgcolor=CORAL_BTN if db["role"] == "Владелец" else "#1E3A4C", padding=6, border_radius=8, on_click=lambda e: (db.update({"role": "Владелец"}), render())),
-        ], spacing=5)))
-
-        show_float = (db["role"] == "Покупатель" and db["tab"] in ["Главная", "Каталог"] and db["subscreen"] in [None, "акции"] and db["client_chat_id"] is None and qty > 0)
-        body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=555 if show_float else 640)
+        show_float = (db["role"] == "Покупатель" and db["tab"] in ["Главная", "Каталог"] and db["subscreen"] in [None, "акции"] and db["client_chat_id"] is None and calc()[0] > 0)
+        body_height = 515 if (is_owner and show_float) else (555 if show_float else (605 if is_owner else 640))
+        body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, height=body_height)
 
         if db["role"] == "Владелец":
             root.controls.append(body)
@@ -280,6 +267,7 @@ def main(page):
             for k, q in list(db["cart"].items()):
                 p = PRODUCTS[k]
                 c_col.controls.append(ft.Container(bgcolor=WHITE, padding=10, border_radius=16, content=ft.Row([ft.Text(p["icon"], size=22), ft.Text(f"{k} ({q} шт.)", size=13, color=BLACK, width=210), ft.Text(f"{p['price'] * q} ₽", size=15, color=BLACK)])))
+            qty, s, pack, save, total = calc()
             c_col.controls.append(ft.Container(bgcolor=WHITE, padding=14, border_radius=16, content=ft.Column([
                 comment_input,
                 ft.Row([ft.Text("Итого", size=18, color=BLACK), ft.Text(f"{total} ₽", size=18, color=BLACK)], spacing=215),
@@ -295,6 +283,7 @@ def main(page):
 
         root.controls.append(body)
 
+        qty, _, _, _, total = calc()
         if show_float:
             root.controls.append(ft.Container(bgcolor=SEA_WAVE, padding=8, content=ft.Row([
                 ft.Container(bgcolor=GREEN, padding=9, border_radius=14, on_click=place_order("⚡ Заказать сейчас (25 мин)"), content=ft.Text(" ⚡ Заказать сейчас ", size=12, color=WHITE)),
@@ -307,8 +296,6 @@ def main(page):
         ], spacing=8)))
 
         page.update()
-
-    render()
 
 if __name__ == "__main__":
     ft.app(target=main, view=ft.AppView.WEB_BROWSER)
