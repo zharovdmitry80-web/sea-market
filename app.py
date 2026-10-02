@@ -4,7 +4,7 @@ from data import *
 from staff import build_staff_view, build_owner_view, render_chat_window
 
 def main(page):
-    page.title = "Морской Маркет — Доставка"
+    page.title = "Морские Деликатесы — Доставка"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.window.width = 445
     page.window.height = 865
@@ -163,7 +163,7 @@ def main(page):
             reg_col = ft.Column([
                 ft.Container(height=60),
                 logo(60),
-                ft.Text("🌊 МОРСКОЙ МАРКЕТ", size=24, color=BRAND_DARK),
+                ft.Text("🦐 МОРСКИЕ ДЕЛИКАТЕСЫ", size=22, color=BRAND_DARK),
                 ft.Text("Добро пожаловать! Зарегистрируйтесь для заказа.", size=12, color=MUTED),
                 reg_name_input,
                 reg_phone_input,
@@ -238,7 +238,7 @@ def main(page):
                 ft.Container(bgcolor=WHITE, padding=12, border_radius=16, content=ft.Column([ft.Text(f"📍 {db['address']}", size=14, color=BLACK), ft.Text(f"🏪 Магазин: {st_name}", size=12, color=BRAND_BLUE)], spacing=1)),
                 render_client_card(),
                 render_news_and_promo_blocks(),
-                sea_divider("Морская витрина • Хиты дня")
+                sea_divider("Деликатесы • Хиты дня")
             ], spacing=10)
             all_keys = list(PRODUCTS.keys())
             if all_keys: home_col.controls.append(ft.Row([prod_card(k) for k in all_keys[:3]], spacing=8))
