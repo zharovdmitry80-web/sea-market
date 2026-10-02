@@ -198,21 +198,13 @@ db = {
     "owner_search": "",
     "owner_edit_target": None,
 
-    "tg_channel": get_db_setting("tg_channel", "morskoy_market_official"),
-    "tg_auto_sync": True,
-    "playing_video_id": None,
+      "tg_channel": get_db_setting("tg_channel", "morskie_delikatesy"),
     "news_posts": [
         {
-            "id": 1, "author": "📲 Telegram-группа @morskoy_market_official",
-            "date": "Сегодня в 10:15 • Официальный пост из Telegram",
-            "text": "🔥 БОЛЬШАЯ МОРСКАЯ АКЦИЯ!\nСвежая поставка королевских креветок и слабосолёной форели уже во всех магазинах сети!",
-            "photo": "logo.jpg", "video": "Обзор свежей поставки (00:45)", "is_tg": True
-        },
-        {
-            "id": 2, "author": "📲 Telegram-группа @morskoy_market_official",
-            "date": "Вчера в 18:40 • Официальный пост из Telegram",
-            "text": "🎁 Напоминаем: каждая 10-я покупка по электронной Клиентской карте приносит бесплатный подарок и статус ЗОЛОТО!",
-            "photo": "", "video": "Как работает экспресс-доставка (01:10)", "is_tg": True
+            "id": 1, "author": "📲 Telegram-канал @morskie_delikatesy",
+            "date": "Сегодня • Акция из Telegram",
+            "text": "РЕЦЕПТ ГОТОВ 😋😋😋\nМидии, как в ресторане, только МНОГО И ВСЕГО ЗА 249₽! 🔥🔥🔥\nПотому что на мидии чилийские в 2 створках акция 🔥🔥🔥 Скидка прям огонь: всего 249Р/0,5КГ вместо 390Р!! 🤤",
+            "photo": "logo.jpg", "video": "Видео-рецепт приготовления мидий (00:45)", "is_tg": True
         }
     ],
 
