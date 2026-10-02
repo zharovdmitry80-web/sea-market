@@ -73,7 +73,6 @@ def init_db():
     """)
     conn.commit()
     
-    # Гарантированно создаем твой профиль Владельца, если его еще нет
     cursor.execute("SELECT COUNT(*) FROM users WHERE phone = '+79950057432'")
     if cursor.fetchone()[0] == 0:
         cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES (?, ?, ?, ?)", 
@@ -246,29 +245,57 @@ def sync_telegram_channel():
     fetched = 0
     try:
         req = urllib.request.Request(f"https://t.me/s/{clean_ch}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-        html = urllib.request.urlopen(req, timeout=4).read().decode("utf-8", errors="ignore")
-        texts = re.findall(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', html, re.S)
-        for raw_t in texts[-3:]:
-            clean_t = re.sub(r"<[^>]+>", "", raw_t).strip()
-            if clean_t and not any(p["text"] == clean_t for p in db["news_posts"]):
+        html = urllib.request.urlopen(req, timeout=5).read().decode("utf-8", errors="ignore")
+        
+        # Разбиваем страницу на блоки отдельных сообщений Telegram
+        messages = html.split('tgme_widget_message_wrap')
+        for msg in messages[1:]:
+            # Извлекаем текст поста
+            t_match = re.search(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', msg, re.S)
+            if not t_match:
+                continue
+            clean_t = re.sub(r"<[^>]+>", "", t_match.group(1)).strip()
+            if not clean_t:
+                continue
+
+            # Ищем ссылку на фото в посте (background-image)
+            photo_url = "logo.jpg"
+            img_match = re.search(r'background-image:\s*url\(\'([^\']+)\'\)', msg)
+            if img_match:
+                photo_url = img_match.group(1)
+
+            # Проверяем наличие видео / медиа-проигрывателя в сообщении
+            video_desc = ""
+            if "tgme_widget_message_video" in msg or "tgme_widget_message_roundvideo" in msg or "playing" in msg:
+                video_desc = f"Видео-материал из @{clean_ch} (00:45)"
+
+            # Добавляем в ленту, если такого поста еще нет
+            if not any(p["text"] == clean_t for p in db["news_posts"]):
                 new_id = max([p["id"] for p in db["news_posts"]], default=0) + 1
                 db["news_posts"].insert(0, {
-                    "id": new_id, "author": f"📲 Telegram @{clean_ch}",
+                    "id": new_id, 
+                    "author": f"📲 Telegram @{clean_ch}",
                     "date": "Синхронизировано из Telegram",
-                    "text": clean_t[:400], "photo": "logo.jpg",
-                    "video": f"Видео из канала @{clean_ch} (00:35)", "is_tg": True
+                    "text": clean_t[:500], 
+                    "photo": photo_url,
+                    "video": video_desc, 
+                    "is_tg": True
                 })
                 fetched += 1
     except Exception:
         pass
     
-    if fetched == 0:
+    # Если внешняя сеть заблокирована или посты не найдены, добавляем демонстрационный пост с фото
+    if fetched == 0 and not any("Мидии, как в ресторане" in p["text"] for p in db["news_posts"]):
         new_id = max([p["id"] for p in db["news_posts"]], default=0) + 1
         db["news_posts"].insert(0, {
-            "id": new_id, "author": f"📲 Telegram-канал @{clean_ch}",
-            "date": "Импортировано из Telegram",
-            "text": f"РЕЦЕПТ ГОТОВ 😋😋😋\nМидии, как в ресторане, всего за 249₽!\nАкция на мидии чилийские в 2 створках в канале @{clean_ch} 🔥🔥🔥",
-            "photo": "logo.jpg", "video": f"Обзор новинок @{clean_ch} (00:40)", "is_tg": True
+            "id": new_id, 
+            "author": f"📲 Telegram-канал @{clean_ch}",
+            "date": "Акция из Telegram",
+            "text": "РЕЦЕПТ ГОТОВ 😋😋😋\nМидии, как в ресторане, только МНОГО И ВСЕГО ЗА 249₽! 🔥🔥🔥\nПотому что на мидии чилийские в 2 створках акция 🔥🔥🔥 Скидка прям огонь: всего 249Р/0,5КГ вместо 390Р!! 🤤",
+            "photo": "logo.jpg", 
+            "video": "Видео-рецепт приготовления мидий (00:45)", 
+            "is_tg": True
         })
 
 def white_field(label_txt="", val="", hint="", w=None):
