@@ -296,7 +296,6 @@ def main(page):
 
         is_owner_user = (db["phone"] == "+79950057432" or db["role"] == "Владелец")
 
-        # Обязательно объявляем переменные состояния ДО их использования
         show_float = (db["role"] == "Покупатель" and db["tab"] in ["Главная", "Каталог"] and db["subscreen"] in [None, "акции"] and db["client_chat_id"] is None and calc()[0] > 0)
         
         body = ft.Column(spacing=10, scroll=ft.ScrollMode.AUTO, expand=True)
