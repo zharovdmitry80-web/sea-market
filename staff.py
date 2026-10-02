@@ -1,3 +1,4 @@
+import sqlite3
 import flet as ft
 from data import *
 
@@ -112,7 +113,6 @@ def build_owner_view(body_col, root_col, render_callback):
     )
     body_col.controls.append(header)
     
-    # ЯВНЫЕ КНОПКИ ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК ПАНЕЛИ ВЛАДЕЛЬЦА
     owner_tabs = ["Каталог", "Новости", "Люди", "Магазины", "Заказы"]
     current_o_tab = db.get("owner_tab", "Каталог")
     
@@ -127,7 +127,6 @@ def build_owner_view(body_col, root_col, render_callback):
     
     body_col.controls.append(tabs_row)
 
-    # 1. ВКЛАДКА КАТАЛОГ И АКЦИИ
     if current_o_tab == "Каталог":
         tg_input = white_field(val=db["tg_channel"], hint="morskie_delikatesy или https://t.me/...")
         
@@ -165,7 +164,6 @@ def build_owner_view(body_col, root_col, render_callback):
             )
             body_col.controls.append(p_card)
 
-    # 2. ВКЛАДКА НОВОСТИ
     elif current_o_tab == "Новости":
         body_col.controls.append(sea_divider("Лента новостей Telegram"))
         for p in db["news_posts"]:
@@ -176,7 +174,6 @@ def build_owner_view(body_col, root_col, render_callback):
                 ], spacing=6))
             )
 
-    # 3. ВКЛАДКА ЛЮДИ (Управление пользователями)
     elif current_o_tab == "Люди":
         body_col.controls.append(sea_divider("Список пользователей и сотрудников"))
         for u in users_list:
@@ -192,7 +189,6 @@ def build_owner_view(body_col, root_col, render_callback):
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
             )
 
-    # 4. ВКЛАДКА МАГАЗИНЫ (Управление точками)
     elif current_o_tab == "Магазины":
         body_col.controls.append(sea_divider("Торговые точки сети"))
         for s in stores_list:
@@ -208,7 +204,6 @@ def build_owner_view(body_col, root_col, render_callback):
                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
             )
 
-    # 5. ВКЛАДКА ЗАКАЗЫ
     elif current_o_tab == "Заказы":
         body_col.controls.append(sea_divider("Все заказы клиентов"))
         for o in db["orders_list"]:
