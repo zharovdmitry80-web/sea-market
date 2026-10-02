@@ -50,6 +50,7 @@ DB_NAME = "market.db"
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    
     # Таблица пользователей
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -60,6 +61,7 @@ def init_db():
             deliveries INTEGER
         )
     """)
+    
     # Таблица магазинов
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS stores (
@@ -71,25 +73,20 @@ def init_db():
     """)
     conn.commit()
     
-    # Если база пустая — создаём дефолтных пользователей (первый — Владелец) и магазины
+    # Безопасная вставка дефолтных пользователей
     cursor.execute("SELECT COUNT(*) FROM users")
     if cursor.fetchone()[0] == 0:
-        default_users = [
-            ("Главный Владелец", "+7 (995) 005-74-32", "Владелец", 0),
-            ("Алексей Ветров", "+7 (918) 000-45-12", "Курьер", 1),
-            ("Денис Морской", "+7 (928) 444-11-22", "Курьер", 1),
-            ("Иван Морозов", "+7 (918) 777-55-33", "Покупатель", 0),
-            ("Сергей Бережной", "+7 (900) 123-45-67", "Магазин", 0)
-        ]
-        cursor.executemany("INSERT INTO users (name, phone, role, deliveries) VALUES (?, ?, ?, ?)", default_users)
-        
+        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES ('Главный Владелец', '+7 (995) 005-74-32', 'Владелец', 0)")
+        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES ('Алексей Ветров', '+7 (918) 000-45-12', 'Курьер', 1)")
+        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES ('Иван Морозов', '+7 (918) 777-55-33', 'Покупатель', 0)")
+        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES ('Сергей Бережной', '+7 (900) 123-45-67', 'Магазин', 0)")
+
+    # Безопасная вставка магазинов
     cursor.execute("SELECT COUNT(*) FROM stores")
     if cursor.fetchone()[0] == 0:
-        default_stores = [
-            ("Морской Маркет №1 (Северная)", "г. Краснодар, ул. 1-го Мая, 580/3", "08:00 – 22:00"),
-            ("Морской Маркет №2 (Центр)", "г. Краснодар, ул. Красная, 150", "08:00 – 23:00")
-        ]
-        cursor.executemany("INSERT INTO stores (name, address, hours)", default_stores)
+        cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морской Маркет №1 (Северная)', 'г. Краснодар, ул. 1-го Мая, 580/3', '08:00 – 22:00')")
+        cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морской Маркет №2 (Центр)', 'г. Краснодар, ул. Красная, 150', '08:00 – 23:00')")
+
     conn.commit()
     conn.close()
 
