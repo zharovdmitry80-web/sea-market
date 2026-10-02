@@ -54,6 +54,7 @@ def init_db():
             name TEXT,
             phone TEXT,
             role TEXT,
+            password TEXT,
             deliveries INTEGER
         )
     """)
@@ -75,8 +76,8 @@ def init_db():
     
     cursor.execute("SELECT COUNT(*) FROM users WHERE phone = '+79950057432'")
     if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES (?, ?, ?, ?)", 
-                       ("Дмитрий Жаров", "+79950057432", "Владелец", 0))
+        cursor.execute("INSERT INTO users (name, phone, role, password, deliveries) VALUES (?, ?, ?, ?, ?)", 
+                       ("Дмитрий Жаров", "+79950057432", "Владелец", "12345", 0))
         conn.commit()
 
     cursor.execute("SELECT COUNT(*) FROM stores")
@@ -110,29 +111,15 @@ def save_db_setting(key, value):
 def load_users_from_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, name, phone, role, deliveries FROM users")
+    cursor.execute("SELECT id, name, phone, role, password, deliveries FROM users")
     rows = cursor.fetchall()
     conn.close()
-    return [{"id": r[0], "name": r[1], "phone": r[2], "role": r[3], "deliveries": r[4]} for r in rows]
+    return [{"id": r[0], "name": r[1], "phone": r[2], "role": r[3], "password": r[4], "deliveries": r[5]} for r in rows]
 
-def save_user_to_db(name, phone, role="Покупатель"):
+def save_user_to_db(name, phone, role="Покупатель", password="12345"):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES (?, ?, ?, 0)", (name, phone, role))
-    conn.commit()
-    conn.close()
-
-def update_user_role_in_db(uid, new_role):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET role = ? WHERE id = ?", (new_role, uid))
-    conn.commit()
-    conn.close()
-
-def delete_user_from_db(uid):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM users WHERE id = ?", (uid,))
+    cursor.execute("INSERT INTO users (name, phone, role, password, deliveries) VALUES (?, ?, ?, ?, 0)", (name, phone, role, password))
     conn.commit()
     conn.close()
 
@@ -143,21 +130,6 @@ def load_stores_from_db():
     rows = cursor.fetchall()
     conn.close()
     return [{"id": r[0], "name": r[1], "address": r[2], "hours": r[3]} for r in rows]
-
-def save_store_to_db(name, address, hours="08:00 – 22:00"):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO stores (name, address, hours) VALUES (?, ?, ?)", (name, address, hours))
-    conn.commit()
-    conn.close()
-
-def delete_store_from_db(sid):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM stores WHERE id = ?", (sid,))
-    conn.commit()
-    conn.close()
-
 
 db = {
     "role": "Владелец",
@@ -233,12 +205,12 @@ db = {
     ]
 }
 
-def sync_telegram_channel():
-    raw_input_ch = db["tg_channel"]
-    clean_ch = raw_input_ch.replace("https://t.me/", "").replace("http://t.me/", "").replace("@", "").strip().split("/")[0]
-    if not clean_ch:
-        clean_ch = "morskie_delikatesy"
+def clean_tg_link(raw_val):
+    clean = raw_val.replace("https://t.me/", "").replace("http://t.me/", "").replace("@", "").strip().split("/")[0]
+    return clean if clean else "morskie_delikatesy"
 
+def sync_telegram_channel():
+    clean_ch = clean_tg_link(db["tg_channel"])
     db["tg_channel"] = clean_ch
     save_db_setting("tg_channel", clean_ch)
 
@@ -247,10 +219,8 @@ def sync_telegram_channel():
         req = urllib.request.Request(f"https://t.me/s/{clean_ch}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         html = urllib.request.urlopen(req, timeout=5).read().decode("utf-8", errors="ignore")
         
-        # Разбиваем страницу на блоки отдельных сообщений Telegram
         messages = html.split('tgme_widget_message_wrap')
         for msg in messages[1:]:
-            # Извлекаем текст поста
             t_match = re.search(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', msg, re.S)
             if not t_match:
                 continue
@@ -258,18 +228,15 @@ def sync_telegram_channel():
             if not clean_t:
                 continue
 
-            # Ищем ссылку на фото в посте (background-image)
             photo_url = "logo.jpg"
             img_match = re.search(r'background-image:\s*url\(\'([^\']+)\'\)', msg)
             if img_match:
                 photo_url = img_match.group(1)
 
-            # Проверяем наличие видео / медиа-проигрывателя в сообщении
             video_desc = ""
-            if "tgme_widget_message_video" in msg or "tgme_widget_message_roundvideo" in msg or "playing" in msg:
-                video_desc = f"Видео-материал из @{clean_ch} (00:45)"
+            if "tgme_widget_message_video" in msg or "tgme_widget_message_roundvideo" in msg or "playing" in msg or "video" in msg:
+                video_desc = f"Видео-материал из канала @{clean_ch} (00:45)"
 
-            # Добавляем в ленту, если такого поста еще нет
             if not any(p["text"] == clean_t for p in db["news_posts"]):
                 new_id = max([p["id"] for p in db["news_posts"]], default=0) + 1
                 db["news_posts"].insert(0, {
@@ -285,7 +252,6 @@ def sync_telegram_channel():
     except Exception:
         pass
     
-    # Если внешняя сеть заблокирована или посты не найдены, добавляем демонстрационный пост с фото
     if fetched == 0 and not any("Мидии, как в ресторане" in p["text"] for p in db["news_posts"]):
         new_id = max([p["id"] for p in db["news_posts"]], default=0) + 1
         db["news_posts"].insert(0, {
