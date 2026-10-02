@@ -82,11 +82,9 @@ def init_db():
         cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морской Маркет №2 (Центр)', 'г. Краснодар, ул. Красная, 150', '08:00 – 23:00')")
     
     # Дефолтный канал в настройках
-    cursor.execute("SELECT value FROM settings WHERE key = 'tg_channel'")
+      cursor.execute("SELECT value FROM settings WHERE key = 'tg_channel'")
     if not cursor.fetchone():
-        cursor.execute("INSERT INTO settings (key, value) VALUES ('tg_channel', 'morskoy_market_official')")
-    conn.commit()
-    conn.close()
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('tg_channel', 'morskie_delikatesy')")
 
 init_db()
 
