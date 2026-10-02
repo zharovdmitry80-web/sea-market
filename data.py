@@ -73,6 +73,13 @@ def init_db():
     """)
     conn.commit()
     
+    # Гарантированно создаем твой профиль Владельца, если его еще нет
+    cursor.execute("SELECT COUNT(*) FROM users WHERE phone = '+79950057432'")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES (?, ?, ?, ?)", 
+                       ("Дмитрий Жаров", "+79950057432", "Владелец", 0))
+        conn.commit()
+
     cursor.execute("SELECT COUNT(*) FROM stores")
     if cursor.fetchone()[0] == 0:
         cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морские Деликатесы №1 (Северная)', 'г. Краснодар, ул. 1-го Мая, 580/3', '08:00 – 22:00')")
@@ -109,7 +116,7 @@ def load_users_from_db():
     conn.close()
     return [{"id": r[0], "name": r[1], "phone": r[2], "role": r[3], "deliveries": r[4]} for r in rows]
 
-def save_user_to_db(name, phone, role):
+def save_user_to_db(name, phone, role="Покупатель"):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("INSERT INTO users (name, phone, role, deliveries) VALUES (?, ?, ?, 0)", (name, phone, role))
@@ -127,13 +134,6 @@ def delete_user_from_db(uid):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("DELETE FROM users WHERE id = ?", (uid,))
-    conn.commit()
-    conn.close()
-
-def clear_users_in_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM users")
     conn.commit()
     conn.close()
 
@@ -159,28 +159,21 @@ def delete_store_from_db(sid):
     conn.commit()
     conn.close()
 
-def clear_stores_in_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM stores")
-    conn.commit()
-    conn.close()
-
 
 db = {
-    "role": "Покупатель",
+    "role": "Владелец",
     "tab": "Главная",
     "subscreen": None,
     "search_q": "",
     "fio": "Дмитрий Жаров",
-    "phone": "+7 (995) 005-74-32",
+    "phone": "+79950057432",
     "address": "Волховская улица, 8",
     "intercom": "Подъезд 2, кв. 45, домофон 45К1234",
     "time_slot": None,
     "slot_warning": False,
     "orders": 9,
-    "status": "Серебро",
-    "bonuses": 1088,
+    "status": "Золото",
+    "bonuses": 2500,
     "spend_bonuses": False,
     "pay_methods": ["⚡ СБП (Система быстрых платежей)", "🟢 SberPay", "🟡 Т-Pay", "💳 Карта МИР •••• 6148"],
     "selected_pay": "⚡ СБП (Система быстрых платежей)",
