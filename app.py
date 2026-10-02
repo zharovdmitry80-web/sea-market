@@ -11,11 +11,10 @@ def main(page):
     page.bgcolor = SEA_BG
     page.padding = 0
 
-    # Поля для экрана регистрации
+    # Поля для экрана регистрации при первом запуске
     reg_name_input = white_field(label_txt="Ваше Имя и Фамилия", hint="Иван Иванов")
     reg_phone_input = white_field(label_txt="Номер телефона", hint="+7 (900) 000-00-00")
     
-    # Выбор стартовой роли при регистрации
     selected_reg_role = {"role": "Покупатель"}
 
     def set_reg_role(r):
@@ -167,14 +166,13 @@ def main(page):
     def render():
         root.controls.clear()
         
-        # --- ПРОВЕРКА БАЗЫ ДАННЫХ: ЕСЛИ ПОЛЬЗОВАТЕЛЕЙ НЕТ — ОТКРЫВАЕМ ОКНО РЕГИСТРАЦИИ ---
         users_in_db = load_users_from_db()
         if not users_in_db:
             reg_col = ft.Column([
                 ft.Container(height=40),
                 logo(54),
                 ft.Text("🌊 МОРСКОЙ МАРКЕТ", size=22, color=BRAND_DARK),
-                ft.Text("Добро пожаловать! Зарегистрируйтесь для начала работы в приложении.", size=12, color=MUTED),
+                ft.Text("Добро пожаловать! Зарегистрируйтесь для начала работы.", size=12, color=MUTED),
                 reg_name_input,
                 reg_phone_input,
                 ft.Text("Выберите вашу стартовую роль:", size=13, color=BLACK),
@@ -307,5 +305,5 @@ def main(page):
 
         page.update()
 
-        if __name__ == "__main__":
-            ft.app(target=main, view=ft.AppView.WEB_BROWSER)
+if __name__ == "__main__":
+    ft.app(target=main, view=ft.AppView.WEB_BROWSER)
