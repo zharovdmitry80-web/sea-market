@@ -1,7 +1,5 @@
 import os
 import sqlite3
-import re
-import urllib.request
 import flet as ft
 
 SEA_BG = "#D4EDF7"
@@ -16,23 +14,6 @@ WHITE = "#FFFFFF"
 BLACK = "#000000"
 YELLOW = "#FFE600"
 MUTED = "#475569"
-
-CARD_STYLES = {
-    "Бронза":  {"bg": "#B87333", "rim": "#8A5220", "cashback": "3%",  "icon": "🥉"},
-    "Серебро": {"bg": "#607D8B", "rim": "#37474F", "cashback": "5%",  "icon": "🥈"},
-    "Золото":  {"bg": "#D4AF37", "rim": "#9A7B1C", "cashback": "10%", "icon": "🥇"},
-}
-
-PRODUCTS = {
-    "Креветки королевские": {"price": 690, "old_price": 890, "weight": "1 кг", "icon": "🦐", "cat": "Морепродукты и рыба", "is_promo": True, "promo_until": "до 12 октября"},
-    "Минтай Borealis филе": {"price": 399, "old_price": 499, "weight": "400 г", "icon": "🐟", "cat": "Морепродукты и рыба", "is_promo": True, "promo_until": "до 10 октября"},
-    "Форель слабосолёная": {"price": 540, "old_price": 680, "weight": "300 г", "icon": "🍣", "cat": "Морепродукты и рыба", "is_promo": True, "promo_until": "до 15 октября"},
-    "Скумбрия атлантическая": {"price": 190, "old_price": 190, "weight": "300 г", "icon": "🐟", "cat": "Морепродукты и рыба", "is_promo": False, "promo_until": ""},
-    "Напиток Evervess Кола": {"price": 109, "old_price": 149, "weight": "1 л", "icon": "🥤", "cat": "Напитки и вода", "is_promo": True, "promo_until": "до конца недели"},
-    "Вода родниковая": {"price": 45, "old_price": 45, "weight": "1,5 л", "icon": "💧", "cat": "Напитки и вода", "is_promo": False, "promo_until": ""},
-    "Хачапури с сыром": {"price": 79, "old_price": 79, "weight": "120 г", "icon": "🥐", "cat": "К столу и десерты", "is_promo": False, "promo_until": ""},
-    "Чиабатта пшеничная": {"price": 65, "old_price": 65, "weight": "200 г", "icon": "🥖", "cat": "К столу и десерты", "is_promo": False, "promo_until": ""},
-}
 
 DB_NAME = "market.db"
 
@@ -114,8 +95,8 @@ db = {
     "orders": 9, "status": "Золото", "bonuses": 2500, "spend_bonuses": False,
     "pay_methods": ["⚡ СБП (Система быстрых платежей)", "🟢 SberPay", "🟡 Т-Pay", "💳 Карта МИР •••• 6148"],
     "selected_pay": "⚡ СБП (Система быстрых платежей)",
-    "cart": {"Креветки королевские": 1, "Минтай Borealis филе": 1},
-    "gift_added": False, "promo_discount": 0, "comment": "Позвонить, если нужна замена",
+    "cart": {"Креветки королевские": 1},
+    "gift_added": False, "promo_discount": 0, "comment": "",
     "categories": ["Морепродукты и рыба", "Напитки и вода", "К столу и десерты"],
     "owner_tab": "Каталог", "tg_channel": get_db_setting("tg_channel", "morskie_delikatesy"),
     "news_posts": [
@@ -128,21 +109,16 @@ db = {
     "orders_list": []
 }
 
+PRODUCTS = {
+    "Креветки королевские": {"price": 690, "old_price": 890, "weight": "1 кг", "icon": "🦐", "cat": "Морепродукты и рыба", "is_promo": True, "promo_until": "до 12 октября"},
+    "Минтай Borealis филе": {"price": 399, "old_price": 499, "weight": "400 г", "icon": "🐟", "cat": "Морепродукты и рыба", "is_promo": True, "promo_until": "до 10 октября"},
+    "Форель слабосолёная": {"price": 540, "old_price": 680, "weight": "300 г", "icon": "🍣", "cat": "Морепродукты и рыба", "is_promo": True, "promo_until": "до 15 октября"},
+    "Скумбрия атлантическая": {"price": 190, "old_price": 190, "weight": "300 г", "icon": "🐟", "cat": "Морепродукты и рыба", "is_promo": False, "promo_until": ""},
+}
+
 def clean_tg_link(raw_val):
     clean = raw_val.replace("https://t.me/", "").replace("http://t.me/", "").replace("@", "").strip().split("/")[0]
     return clean if clean else "morskie_delikatesy"
-
-def sync_telegram_channel():
-    clean_ch = clean_tg_link(db["tg_channel"])
-    db["tg_channel"] = clean_ch
-    save_db_setting("tg_channel", clean_ch)
-
-def strike_price(val):
-    s = f"{val}.00"
-    return "".join(ch + "\u0336" for ch in s) + " ₽"
-
-def get_promo_names():
-    return [k for k, v in PRODUCTS.items() if v.get("is_promo", False)]
 
 def white_field(label_txt="", val="", hint="", w=None):
     return ft.TextField(
@@ -162,26 +138,9 @@ def sea_divider(text_label):
         content=ft.Row([ft.Text("🌊 🫧", size=14), ft.Text(text_label, size=13, color=BRAND_DARK), ft.Text("🐚 🌊", size=14)], spacing=6)
     )
 
-def status_badge(st):
-    mapping = {
-        "новый": ("🔔 НОВЫЙ", CORAL_BTN), "принят": ("⏳ Сборка", BRAND_BLUE),
-        "поиск_курьера": ("🔍 Поиск", "#D97706"), "передан_курьеру": ("📦 У курьера", PURPLE),
-        "в_доставке": ("🛵 В пути", GREEN), "доставлен": ("✅ Доставлен", GREEN), "отклонен": ("❌ Отменён", RED_ALERT),
-    }
-    txt, col = mapping.get(st, (st, MUTED))
-    return ft.Container(bgcolor=col, padding=5, border_radius=8, content=ft.Text(txt, size=11, color=WHITE))
-
-def get_order_by_id(oid):
-    for o in db["orders_list"]:
-        if o["id"] == oid:
-            return o
-    return None
-
 def main(page):
     page.title = "MD — Морские Деликатесы"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.window.width = 445
-    page.window.height = 865
     page.bgcolor = SEA_BG
     page.padding = 0
 
@@ -200,8 +159,8 @@ def main(page):
     login_pass_input.password = True
     login_pass_input.can_reveal_password = True
 
-    root = ft.Column(spacing=0)
-    main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
+    root = ft.Column(spacing=0, expand=True)
+    main_screen = ft.Container(bgcolor=SEA_BG, expand=True, content=root, alignment=ft.alignment.center)
     page.add(main_screen)
 
     install_dlg = ft.AlertDialog(
