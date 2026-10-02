@@ -82,7 +82,6 @@ def build_owner_view(body_col, root_col, render_callback):
     stores_count = len(load_stores_from_db())
     users_count = len(load_users_from_db())
     
-    # Исправленная шапка панели владельца со встроенной кликабельной иконкой профиля/выхода
     header = ft.Container(
         bgcolor=BRAND_DARK, padding=12, border_radius=16,
         content=ft.Column([
@@ -99,7 +98,28 @@ def build_owner_view(body_col, root_col, render_callback):
     )
     body_col.controls.append(header)
     
-    body_col.controls.append(sea_divider("Управление каталогом и ассортиментом"))
+    # Блок настройки Telegram-канала с автоочисткой ссылок
+    tg_input = white_field(val=db["tg_channel"], hint="morskie_delikatesy или https://t.me/...")
+    
+    def save_tg(e):
+        cleaned = clean_tg_link(tg_input.value)
+        db["tg_channel"] = cleaned
+        save_db_setting("tg_channel", cleaned)
+        sync_telegram_channel()
+        render_callback()
+
+    body_col.controls.append(
+        ft.Container(bgcolor=WHITE, padding=12, border_radius=14, content=ft.Column([
+            ft.Text("📢 Управление Telegram-каналом новостей", size=13, color=BLACK),
+            tg_input,
+            ft.Row([
+                ft.Container(bgcolor=BRAND_BLUE, padding=8, border_radius=10, on_click=save_tg, content=ft.Text("💾 Сохранить и обновить", size=11, color=WHITE)),
+                ft.Container(bgcolor=GREEN, padding=8, border_radius=10, on_click=lambda e: (sync_telegram_channel(), render_callback()), content=ft.Text("🔄 Синхронизировать", size=11, color=WHITE))
+            ], spacing=8)
+        ], spacing=8))
+    )
+    
+    body_col.controls.append(sea_divider("Управление каталогом и акциями"))
     
     for pname, pdata in PRODUCTS.items():
         p_card = ft.Container(
