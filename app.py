@@ -12,6 +12,15 @@ def main(page):
     page.bgcolor = SEA_BG
     page.padding = 0
 
+    # Прописываем мета-теги и иконку для мобильных устройств и PWA
+    page.meta = {
+        "viewport": "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no",
+        "theme-color": "#0F4C64",
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "black-translucent",
+        "apple-mobile-web-app-title": "MD"
+    }
+
     auth_mode = {"screen": "reg"}
     auth_error_text = ft.Text("", size=12, color=RED_ALERT)
 
@@ -35,6 +44,31 @@ def main(page):
     root = ft.Column(spacing=0)
     main_screen = ft.Container(bgcolor=SEA_BG, width=445, height=845, content=root)
     page.add(main_screen)
+
+    # Интерактивное диалоговое окно для установки приложения на телефон
+    install_banner_banner = ft.Banner(
+        bgcolor=WHITE,
+        leading=logo(40),
+        content=ft.Text("Установите приложение «MD» на главный экран для быстрого доступа!", size=13, color=BLACK),
+        actions=[
+            ft.TextButton("Как установить?", on_click=lambda e: page.open(install_dlg)),
+            ft.TextButton("Закрыть", on_click=lambda e: page.close(install_banner_banner)),
+        ],
+    )
+
+    install_dlg = ft.AlertDialog(
+        title=ft.Text("📱 Установка приложения MD"),
+        content=ft.Column([
+            ft.Text("Чтобы приложение работало как нативная программа:", size=13, color=BLACK),
+            ft.Text("1. В браузере (Chrome / Safari) нажмите на меню (три точки ⋮ или кнопку «Поделиться» ⎋).", size=12, color=MUTED),
+            ft.Text("2. Выберите пункт «На главный экран» или «Установить приложение».", size=12, color=MUTED),
+            ft.Text("3. Нажмите «Добавить». Готово! Иконка появится на вашем телефоне.", size=12, color=MUTED),
+        ], spacing=8, tight=True),
+        actions=[ft.TextButton("Понятно", on_click=lambda e: page.close(install_dlg))]
+    )
+
+    def trigger_install(e):
+        page.open(install_dlg)
 
     def register_user(e):
         name = reg_name_input.value.strip()
@@ -304,7 +338,6 @@ def main(page):
                 if p.get("photo") and p["photo"] != "logo.jpg":
                     post_controls.append(ft.Container(content=ft.Image(src=p["photo"], width=390, height=220, border_radius=12, fit=ft.ImageFit.COVER), border_radius=12))
                 
-                # Исправленный блок видео с кликабельной ссылкой на Telegram
                 if p.get("video"):
                     post_controls.append(
                         ft.Container(
@@ -397,12 +430,16 @@ def main(page):
                 ], spacing=4)),
             ], spacing=10)
 
+            # Кнопка установки приложения на телефон во вкладке Профиль
             p_col.controls.append(
-                ft.Container(bgcolor=BRAND_BLUE, padding=14, border_radius=16, content=ft.Column([
-                    ft.Row([ft.Text("📱", size=22), ft.Text("Установите приложение MD", size=14, color=WHITE)], spacing=10),
-                    ft.Text("Добавьте «Морские Деликатесы» на главный экран телефона для быстрой работы!", size=11, color=WHITE),
-                    ft.Container(bgcolor=WHITE, padding=8, border_radius=10, width=365, content=ft.Text("📲 Нажмите «Меню браузера» (⋮) → «Установить приложение»", size=10, color=BLACK, text_align=ft.TextAlign.CENTER))
-                ], spacing=6))
+                ft.Container(
+                    bgcolor=BRAND_BLUE, padding=14, border_radius=16, 
+                    on_click=trigger_install,
+                    content=ft.Column([
+                        ft.Row([ft.Text("📱", size=22), ft.Text("Установить приложение на телефон", size=14, color=WHITE)], spacing=10),
+                        ft.Text("Нажмите сюда, чтобы добавить «MD» на главный экран в один клик!", size=11, color=WHITE),
+                    ], spacing=4)
+                )
             )
 
             if is_owner_user:
