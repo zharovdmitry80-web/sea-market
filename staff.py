@@ -113,20 +113,9 @@ def build_owner_view(body_col, root_col, render_callback):
     )
     body_col.controls.append(header)
     
-    owner_tabs = ["Каталог", "Новости", "Люди", "Магазины", "Заказы"]
     current_o_tab = db.get("owner_tab", "Каталог")
-    
-    tabs_row = ft.Row([
-        ft.Container(
-            bgcolor=BRAND_DARK if current_o_tab == t else WHITE,
-            padding=10, border_radius=12, width=74,
-            on_click=lambda e, tab=t: (db.update({"owner_tab": tab}), render_callback()),
-            content=ft.Text(t, size=11, color=WHITE if current_o_tab == t else BLACK, text_align=ft.TextAlign.CENTER)
-        ) for t in owner_tabs
-    ], spacing=4, alignment=ft.MainAxisAlignment.CENTER)
-    
-    body_col.controls.append(tabs_row)
 
+    # 1. СОДЕРЖИМОЕ ВЫБРАННОЙ ВКЛАДКИ
     if current_o_tab == "Каталог":
         tg_input = white_field(val=db["tg_channel"], hint="morskie_delikatesy или https://t.me/...")
         
@@ -213,6 +202,23 @@ def build_owner_view(body_col, root_col, render_callback):
                     ft.Text(f"Клиент: {o['fio']} ({o['phone']}) • {o['total']} ₽", size=11, color=MUTED)
                 ], spacing=4))
             )
+
+    # 2. КНОПКИ ПЕРЕКЛЮЧЕНИЯ В ВКЛАДОК ТЕПЕРЬ НАХОДЯТСЯ ВНИЗУ
+    owner_tabs = ["Каталог", "Новости", "Люди", "Магазины", "Заказы"]
+    tabs_row = ft.Row([
+        ft.Container(
+            bgcolor=BRAND_DARK if current_o_tab == t else WHITE,
+            padding=10, border_radius=12, width=74,
+            on_click=lambda e, tab=t: (db.update({"owner_tab": tab}), render_callback()),
+            content=ft.Text(t, size=11, color=WHITE if current_o_tab == t else BLACK, text_align=ft.TextAlign.CENTER)
+        ) for t in owner_tabs
+    ], spacing=4, alignment=ft.MainAxisAlignment.CENTER)
+    
+    body_col.controls.append(ft.Container(height=10))
+    body_col.controls.append(tabs_row)
+
+    root_col.controls.clear()
+    root_col.controls.append(ft.Container(bgcolor=SEA_BG, width=445, height=845, content=ft.Column([body_col], spacing=0)))
 
 def toggle_promo(pname, render_cb):
     if pname in PRODUCTS:
