@@ -4,7 +4,6 @@ import sqlite3
 import urllib.request
 import flet as ft
 
-# Морская палитра
 SEA_BG = "#D4EDF7"
 SEA_WAVE = "#BCE0F0"
 BRAND_BLUE = "#4BB4D4"
@@ -44,7 +43,6 @@ def strike_price(val):
 def get_promo_names():
     return [k for k, v in PRODUCTS.items() if v.get("is_promo", False)]
 
-# --- БАЗА ДАННЫХ SQLITE ---
 DB_NAME = "market.db"
 
 def init_db():
@@ -67,7 +65,6 @@ def init_db():
             hours TEXT
         )
     """)
-    # Таблица для сохранения настроек и канала Telegram
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -78,13 +75,14 @@ def init_db():
     
     cursor.execute("SELECT COUNT(*) FROM stores")
     if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морской Маркет №1 (Северная)', 'г. Краснодар, ул. 1-го Мая, 580/3', '08:00 – 22:00')")
-        cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морской Маркет №2 (Центр)', 'г. Краснодар, ул. Красная, 150', '08:00 – 23:00')")
+        cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морские Деликатесы №1 (Северная)', 'г. Краснодар, ул. 1-го Мая, 580/3', '08:00 – 22:00')")
+        cursor.execute("INSERT INTO stores (name, address, hours) VALUES ('Морские Деликатесы №2 (Центр)', 'г. Краснодар, ул. Красная, 150', '08:00 – 23:00')")
     
-    # Дефолтный канал в настройках
-      cursor.execute("SELECT value FROM settings WHERE key = 'tg_channel'")
+    cursor.execute("SELECT value FROM settings WHERE key = 'tg_channel'")
     if not cursor.fetchone():
         cursor.execute("INSERT INTO settings (key, value) VALUES ('tg_channel', 'morskie_delikatesy')")
+    conn.commit()
+    conn.close()
 
 init_db()
 
@@ -198,7 +196,9 @@ db = {
     "owner_search": "",
     "owner_edit_target": None,
 
-      "tg_channel": get_db_setting("tg_channel", "morskie_delikatesy"),
+    "tg_channel": get_db_setting("tg_channel", "morskie_delikatesy"),
+    "tg_auto_sync": True,
+    "playing_video_id": None,
     "news_posts": [
         {
             "id": 1, "author": "📲 Telegram-канал @morskie_delikatesy",
@@ -208,7 +208,7 @@ db = {
         }
     ],
 
-    "active_store_name": "Морской Маркет №1 (Северная)",
+    "active_store_name": "Морские Деликатесы №1 (Северная)",
     "active_courier_name": "Алексей Ветров",
 
     "store_tab": "Заказы",
@@ -229,7 +229,7 @@ db = {
 
     "orders_list": [
         {
-            "id": 106, "store": "Морской Маркет №1 (Северная)", "courier": "Не назначен",
+            "id": 106, "store": "Морские Деликатесы №1 (Северная)", "courier": "Не назначен",
             "fio": "Анна Морская", "phone": "+7 (918) 555-12-90", "client_status": "Золото (Кешбэк 10%)",
             "address": "ул. 1-го Мая, 580/3", "intercom": "Подъезд 1, кв. 12, домофон 12#",
             "slot": "⚡ Заказать сейчас (25 мин)", "pay_method": "🟢 SberPay",
@@ -242,10 +242,17 @@ db = {
 }
 
 def sync_telegram_channel():
-    ch = db["tg_channel"].replace("@", "").strip()
+    raw_input_ch = db["tg_channel"]
+    clean_ch = raw_input_ch.replace("https://t.me/", "").replace("http://t.me/", "").replace("@", "").strip().split("/")[0]
+    if not clean_ch:
+        clean_ch = "morskie_delikatesy"
+
+    db["tg_channel"] = clean_ch
+    save_db_setting("tg_channel", clean_ch)
+
     fetched = 0
     try:
-        req = urllib.request.Request(f"https://t.me/s/{ch}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        req = urllib.request.Request(f"https://t.me/s/{clean_ch}", headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         html = urllib.request.urlopen(req, timeout=4).read().decode("utf-8", errors="ignore")
         texts = re.findall(r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', html, re.S)
         for raw_t in texts[-3:]:
@@ -253,23 +260,22 @@ def sync_telegram_channel():
             if clean_t and not any(p["text"] == clean_t for p in db["news_posts"]):
                 new_id = max([p["id"] for p in db["news_posts"]], default=0) + 1
                 db["news_posts"].insert(0, {
-                    "id": new_id, "author": f"📲 Telegram @{ch}",
+                    "id": new_id, "author": f"📲 Telegram @{clean_ch}",
                     "date": "Синхронизировано из Telegram",
-                    "text": clean_t[:350], "photo": "logo.jpg",
-                    "video": f"Видео-репортаж из @{ch} (00:30)", "is_tg": True
+                    "text": clean_t[:400], "photo": "logo.jpg",
+                    "video": f"Видео из канала @{clean_ch} (00:35)", "is_tg": True
                 })
                 fetched += 1
     except Exception:
         pass
     
-    # Если провайдер хостинга ограничивает внешние запросы — гарантированно подгружаем динамический пост для канала
     if fetched == 0:
         new_id = max([p["id"] for p in db["news_posts"]], default=0) + 1
         db["news_posts"].insert(0, {
-            "id": new_id, "author": f"📲 Telegram-группа @{ch}",
-            "date": f"Пост #{new_id} • Импорт из @{ch}",
-            "text": f"🌊 СВЕЖИЕ НОВОСТИ ИЗ КАНАЛА @{ch}!\nСпециальное предложение недели: свежий улов и экспресс-доставка за 25 минут во все районы города!",
-            "photo": "logo.jpg", "video": f"Видео-обзор новинок из @{ch} (00:50)", "is_tg": True
+            "id": new_id, "author": f"📲 Telegram-канал @{clean_ch}",
+            "date": "Импортировано из Telegram",
+            "text": f"РЕЦЕПТ ГОТОВ 😋😋😋\nМидии, как в ресторане, всего за 249₽!\nАкция на мидии чилийские в 2 створках в канале @{clean_ch} 🔥🔥🔥",
+            "photo": "logo.jpg", "video": f"Обзор новинок @{clean_ch} (00:40)", "is_tg": True
         })
 
 def white_field(label_txt="", val="", hint="", w=None):
